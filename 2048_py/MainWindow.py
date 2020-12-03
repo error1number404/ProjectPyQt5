@@ -15,6 +15,7 @@ from ResultOfGame import Ui_ResultOfGameForm
 from InstructionForm import Ui_InstructionForm
 from StatisticForm import Ui_StatisticForm
 from SelectPlayerForm import Ui_SelectPlayerForm
+from OptionsForm import Ui_OptionsForm
 import random
 import sqlite3
 
@@ -22,7 +23,7 @@ import sqlite3
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.setFixedSize(680, 600)
+        MainWindow.setFixedSize(680, 599)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.CurrentPlayer_LineEdit = QtWidgets.QLineEdit(self.centralwidget)
@@ -52,16 +53,18 @@ class Ui_MainWindow(object):
         self.LeadersBoard_Label.setAlignment(QtCore.Qt.AlignCenter)
         self.LeadersBoard_Label.setObjectName("LeadersBoard_Label")
         self.CurrentScore_LineEdit = QtWidgets.QLineEdit(self.centralwidget)
-        self.CurrentScore_LineEdit.setGeometry(QtCore.QRect(220, 20, 80, 20))
+        self.CurrentScore_LineEdit.setGeometry(QtCore.QRect(220, 20, 120, 20))
+        self.CurrentScore_LineEdit.setAlignment(QtCore.Qt.AlignCenter)
         self.CurrentScore_LineEdit.setObjectName("CurrentScore_LineEdit")
         self.BestScore_LineEdit = QtWidgets.QLineEdit(self.centralwidget)
-        self.BestScore_LineEdit.setGeometry(QtCore.QRect(590, 20, 80, 20))
+        self.BestScore_LineEdit.setGeometry(QtCore.QRect(550, 20, 120, 20))
+        self.BestScore_LineEdit.setAlignment(QtCore.Qt.AlignCenter)
         self.BestScore_LineEdit.setObjectName("BestScore_LineEdit")
         self.CurrentScore_Label = QtWidgets.QLabel(self.centralwidget)
         self.CurrentScore_Label.setGeometry(QtCore.QRect(220, 0, 80, 16))
         self.CurrentScore_Label.setObjectName("CurrentScore_Label")
         self.BestScore_Label = QtWidgets.QLabel(self.centralwidget)
-        self.BestScore_Label.setGeometry(QtCore.QRect(590, 0, 80, 16))
+        self.BestScore_Label.setGeometry(QtCore.QRect(550, 0, 80, 16))
         self.BestScore_Label.setObjectName("BestScore_Label")
         self.BackgroundForField_Label = QtWidgets.QLabel(self.centralwidget)
         self.BackgroundForField_Label.setGeometry(QtCore.QRect(220, 100, 450, 450))
@@ -76,6 +79,20 @@ class Ui_MainWindow(object):
         self.LoadGame_PushButton = QtWidgets.QPushButton(self.centralwidget)
         self.LoadGame_PushButton.setGeometry(QtCore.QRect(550, 60, 120, 25))
         self.LoadGame_PushButton.setObjectName("LoadGame_PushButton")
+        self.GetOptions_PushButton = QtWidgets.QPushButton(self.centralwidget)
+        self.GetOptions_PushButton.setGeometry(QtCore.QRect(10, 140, 180, 25))
+        self.GetOptions_PushButton.setObjectName("GetOptions_PushButton")
+        self.CurrentLevel_LineEdit = QtWidgets.QLineEdit(self.centralwidget)
+        self.CurrentLevel_LineEdit.setGeometry(QtCore.QRect(385, 20, 120, 20))
+        self.CurrentLevel_LineEdit.setAlignment(QtCore.Qt.AlignCenter)
+        self.CurrentLevel_LineEdit.setObjectName("CurrentLevel_LineEdit")
+        self.label = QtWidgets.QLabel(self.centralwidget)
+        self.label.setGeometry(QtCore.QRect(385, 0, 121, 16))
+        self.label.setObjectName("label")
+        self.LevelUpLabel = QtWidgets.QLabel(self.centralwidget)
+        self.LevelUpLabel.setGeometry(QtCore.QRect(220, 0, 451, 61))
+        self.LevelUpLabel.setText("")
+        self.LevelUpLabel.setObjectName("LevelUpLabel")
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
         self.menubar.setGeometry(QtCore.QRect(0, 0, 680, 21))
@@ -90,6 +107,7 @@ class Ui_MainWindow(object):
         self.CurrentPlayer_LineEdit.setReadOnly(True)
         self.CurrentScore_LineEdit.setReadOnly(True)
         self.BestScore_LineEdit.setReadOnly(True)
+        self.CurrentLevel_LineEdit.setReadOnly(True)
         self.BackgroundForField_Label.setPixmap(QPixmap("images/background.jpg"))
         self.StartNewGame_PushButton.clicked.connect(self.create_new_field)
         self.GetInstruction_pushButton.clicked.connect(self.get_instruction)
@@ -97,10 +115,13 @@ class Ui_MainWindow(object):
         self.SelectCurrentPlayer_PushButton.clicked.connect(self.selectcurrentplayer)
         self.SaveGame_PushButton.clicked.connect(self.do_save)
         self.LoadGame_PushButton.clicked.connect(self.load_save)
+        self.GetOptions_PushButton.clicked.connect(self.get_options)
         self.field = []
         self.ButtonsField = []
         self.currentPlayer = None
         self.blocked = False
+        self.minValueForNewPlate = [2, 4, 4]
+        self.maxValueForWin = [64, 512, 2048]
         font = QtGui.QFont()
         font.setFamily("Arial Black")
         font.setPointSize(16)
@@ -116,12 +137,16 @@ class Ui_MainWindow(object):
                 self.ButtonsField[x_pos][y_pos].hide()
         self.load_leaders_board()
         self.load_mp3('sounds/swipe.mp3')
+        self.load_mp3_lvlup('sounds/level_up.mp3')
 
     def selectcurrentplayer(self):
         self.selectCurrentPlayer = Ui_SelectPlayerForm(self)
 
     def get_instruction(self):
         self.instruction = Ui_InstructionForm(self)
+
+    def get_options(self):
+        self.options = Ui_OptionsForm(self)
 
     def get_statistic(self):
         con = sqlite3.connect(self.DataBaseName)
@@ -152,7 +177,14 @@ class Ui_MainWindow(object):
         while self.field[x_pos][y_pos] != 0:
             x_pos = random.randint(0, 3)
             y_pos = random.randint(0, 3)
-        self.field[x_pos][y_pos] = random.choice([2, 2, 2, 4])
+        if self.CurrentLevel_LineEdit.text() == '1':
+            self.field[x_pos][y_pos] = random.choice([self.minValueForNewPlate[0]] * 3 + [self.minValueForNewPlate[0]*2])
+        elif self.CurrentLevel_LineEdit.text() == '2':
+            self.field[x_pos][y_pos] = random.choice(
+                [self.minValueForNewPlate[1]] * 3 + [self.minValueForNewPlate[1] * 2])
+        else:
+            self.field[x_pos][y_pos] = random.choice(
+                [self.minValueForNewPlate[2]] * 3 + [self.minValueForNewPlate[2] * 2])
         self.show_field()
 
     def show_field(self):
@@ -176,8 +208,12 @@ class Ui_MainWindow(object):
                                                     "Введите название для сохранения")
             if ok_pressed:
                 file = open('saves/' + name + '.txt','w+')
-                str_for_save = ' '.join([' '.join(list(map(lambda x: str(x), self.field[i]))) for i in range(4)])
-                file.write(str_for_save)
+                str_for_save_game = ' '.join([' '.join(list(map(lambda x: str(x), self.field[i]))) for i in range(4)])
+                curlevel = int(self.CurrentLevel_LineEdit.text())
+                str_for_save_options = str(self.minValueForNewPlate[curlevel - 1]) + ' ' + str(self.maxValueForWin[curlevel - 1])
+                file.write(str_for_save_game + '\n')
+                file.write(str_for_save_options + '\n')
+                file.write(str(curlevel))
                 file.close()
 
     def load_save(self):
@@ -189,9 +225,13 @@ class Ui_MainWindow(object):
                 'Сохранение(*.txt)')[0]
             if filename != '':
                 file = open(filename,'r')
-                save = file.readlines()[0].split(' ')
+                save = file.readlines()[0].rstrip('\n').split(' ')
                 save = list(map(lambda x: int(x),save))
                 save = [[save[4 * i + j] for j in range(4)]for i in range(4)]
+                options = file.readlines()[1].rstrip('\n').split(' ')
+                level = int(file.readlines()[2])
+                self.maxValueForWin[level - 1] = int(options[1])
+                self.minValueForNewPlate[level - 1] = int(options[0])
                 self.field = save
                 self.show_field()
                 self.count_score()
@@ -216,8 +256,10 @@ class Ui_MainWindow(object):
         self.count_score()
         for x_pos in range(4):
             for y_pos in range(4):
-                if self.field[x_pos][y_pos] == 2048:
+                if self.field[x_pos][y_pos] == self.maxValueForWin[-1]:
                     return True
+                elif self.field[x_pos][y_pos] == self.maxValueForWin[int(self.CurrentLevel_LineEdit.text()) - 1]:
+                    return 'level_up'
         for x_pos in range(4):
             for y_pos in range(4):
                 if self.field[x_pos][y_pos] == 0:
@@ -283,6 +325,8 @@ class Ui_MainWindow(object):
         self.field = self.reverse()
         self.move_up()
         self.field = self.reverse()
+        self.LevelUpLabel.setPixmap(QPixmap(''))
+
 
     def move_left(self):
         self.field = self.transpose()
@@ -306,6 +350,11 @@ class Ui_MainWindow(object):
                 self.add_new_plate()
             elif self.is_win() is None and self.changed is False:
                 pass
+            elif self.is_win() == 'level_up':
+                self.add_new_plate()
+                self.CurrentLevel_LineEdit.setText(str(int(self.CurrentLevel_LineEdit.text()) + 1))
+                self.LevelUpLabel.setPixmap(QPixmap('images/level_up.jpg'))
+                self.player_lvl.play()
             else:
                 self.blocked = True
                 self.show_field()
@@ -318,6 +367,11 @@ class Ui_MainWindow(object):
                 self.add_new_plate()
             elif self.is_win() is None and self.changed is False:
                 pass
+            elif self.is_win() == 'level_up':
+                self.add_new_plate()
+                self.CurrentLevel_LineEdit.setText(str(int(self.CurrentLevel_LineEdit.text()) + 1))
+                self.LevelUpLabel.setPixmap(QPixmap('images/level_up.jpg'))
+                self.player_lvl.play()
             else:
                 self.show_field()
                 self.blocked = True
@@ -330,6 +384,11 @@ class Ui_MainWindow(object):
                 self.add_new_plate()
             elif self.is_win() is None and self.changed is False:
                 pass
+            elif self.is_win() == 'level_up':
+                self.add_new_plate()
+                self.CurrentLevel_LineEdit.setText(str(int(self.CurrentLevel_LineEdit.text()) + 1))
+                self.LevelUpLabel.setPixmap(QPixmap('images/level_up.jpg'))
+                self.player_lvl.play()
             else:
                 self.blocked = True
                 self.show_field()
@@ -342,6 +401,11 @@ class Ui_MainWindow(object):
                 self.add_new_plate()
             elif self.is_win() is None and self.changed is False:
                 pass
+            elif self.is_win() == 'level_up':
+                self.add_new_plate()
+                self.CurrentLevel_LineEdit.setText(str(int(self.CurrentLevel_LineEdit.text()) + 1))
+                self.LevelUpLabel.setPixmap(QPixmap('images/level_up.jpg'))
+                self.player_lvl.play()
             else:
                 self.blocked = True
                 self.show_field()
@@ -353,6 +417,12 @@ class Ui_MainWindow(object):
         content = QtMultimedia.QMediaContent(media)
         self.player = QtMultimedia.QMediaPlayer()
         self.player.setMedia(content)
+
+    def load_mp3_lvlup(self, filename):
+        media = QtCore.QUrl.fromLocalFile(filename)
+        content = QtMultimedia.QMediaContent(media)
+        self.player_lvl = QtMultimedia.QMediaPlayer()
+        self.player_lvl.setMedia(content)
 
     def load_leaders_board(self):
         con = sqlite3.connect(self.DataBaseName)
@@ -390,3 +460,6 @@ class Ui_MainWindow(object):
         self.StartNewGame_PushButton.setText(_translate("MainWindow", "Начать новую игру"))
         self.SaveGame_PushButton.setText(_translate("MainWindow", "Сохранить игру"))
         self.LoadGame_PushButton.setText(_translate("MainWindow", "Загрузить игру"))
+        self.GetOptions_PushButton.setText(_translate("MainWindow", "Настройки"))
+        self.CurrentLevel_LineEdit.setText(_translate("MainWindow", "1"))
+        self.label.setText(_translate("MainWindow", "Текущий уровень:"))
